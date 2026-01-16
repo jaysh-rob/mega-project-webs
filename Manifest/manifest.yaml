@@ -51,6 +51,7 @@ metadata:
   name: mysql
   namespace: webapps
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: mysql
@@ -61,47 +62,63 @@ spec:
       labels:
         app: mysql
     spec:
+      # ✅ Correct nodegroup
+      nodeSelector:
+        eks.amazonaws.com/nodegroup: node2
+
+      # ✅ Correct AZs (match your nodes)
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: topology.kubernetes.io/zone
+                    operator: In
+                    values:
+                      - eu-west-1a
+                      - eu-west-1b
+
       containers:
-      - image: mysql:8
-        name: mysql
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "500m"
-          limits:
-            memory: "1Gi"
-            cpu: "1"
-        env:
-        - name: MYSQL_ROOT_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: mysql-secret
-              key: MYSQL_ROOT_PASSWORD
-        - name: MYSQL_DATABASE
-          valueFrom:
-            configMapKeyRef:
-              name: mysql-config
-              key: MYSQL_DATABASE
-        ports:
-        - containerPort: 3306
-          name: mysql
-        volumeMounts:
-        - mountPath: /var/lib/mysql
-          name: mysql-data
-        livenessProbe:
-          tcpSocket:
-            port: 3306
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          exec:
-            command: ["mysqladmin", "ping", "-h", "127.0.0.1"]
-          initialDelaySeconds: 30
-          periodSeconds: 10
+        - name: mysql
+          image: mysql:8
+          ports:
+            - containerPort: 3306
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: mysql-config
+                  key: MYSQL_DATABASE
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+          livenessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "127.0.0.1"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
       volumes:
-      - name: mysql-data
-        persistentVolumeClaim:
-          claimName: mysql-pvc
+        - name: mysql-data
+          persistentVolumeClaim:
+            claimName: mysql-pvc
 ---
 # MySQL Service
 apiVersion: v1
