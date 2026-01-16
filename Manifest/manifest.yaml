@@ -134,7 +134,7 @@ spec:
     spec:
       containers:
       - name: bankapp
-        image: jackdhub/bankapp:v.30
+        image: jackdhub/bankapp:v.32
         resources:
           requests:
             memory: "256Mi"
