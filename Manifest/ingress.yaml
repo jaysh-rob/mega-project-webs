@@ -2,15 +2,22 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: bankapp-ingress
+  namespace: webapps
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/rewrite-target: /
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:eu-west-1:533818101673:certificate/7b2b96d7-a24c-43fc-b050-2d15370453fa
+
+    alb.ingress.kubernetes.io/healthcheck-path: /login
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+
 spec:
-  ingressClassName: nginx
+  ingressClassName: alb
   rules:
-    - host: www.shackverse.co
+    - host: www.jaycloud.space
       http:
         paths:
           - path: /
@@ -20,7 +27,3 @@ spec:
                 name: bankapp-service
                 port:
                   number: 80
-  tls:
-    - hosts:
-        - www.shackverse.co
-      secretName: shackverse-co-tls
