@@ -62,16 +62,17 @@ spec:
       labels:
         app: mysql
     spec:
-      # ✅ Correct nodegroup
+      # ✅ Force pod onto correct nodegroup
       nodeSelector:
         eks.amazonaws.com/nodegroup: node2
 
-      # ✅ Correct AZs (match your nodes)
+      # ✅ AZ preference (NOT hard requirement — avoids deadlock)
       affinity:
         nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-              - matchExpressions:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
                   - key: topology.kubernetes.io/zone
                     operator: In
                     values:
@@ -83,6 +84,8 @@ spec:
           image: mysql:8
           ports:
             - containerPort: 3306
+              name: mysql
+
           resources:
             requests:
               cpu: "500m"
@@ -90,6 +93,7 @@ spec:
             limits:
               cpu: "1"
               memory: "1Gi"
+
           env:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
@@ -101,14 +105,17 @@ spec:
                 configMapKeyRef:
                   name: mysql-config
                   key: MYSQL_DATABASE
+
           volumeMounts:
             - name: mysql-data
               mountPath: /var/lib/mysql
+
           livenessProbe:
             tcpSocket:
               port: 3306
             initialDelaySeconds: 30
             periodSeconds: 10
+
           readinessProbe:
             exec:
               command: ["mysqladmin", "ping", "-h", "127.0.0.1"]
@@ -119,6 +126,7 @@ spec:
         - name: mysql-data
           persistentVolumeClaim:
             claimName: mysql-pvc
+
 ---
 # MySQL Service
 apiVersion: v1
